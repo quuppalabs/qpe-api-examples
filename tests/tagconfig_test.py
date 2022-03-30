@@ -15,12 +15,10 @@ import src.standalone_scripts.TagConfig as tc
 
 
 def test_update_url_query():
-    original_url = 'http://localhost:8080/qpe/getTagData'
-    final_url = 'http://localhost:8080/qpe/getTagData?mode=json&format=defaultInfo'
-    parameters = {
-        'mode': 'json',
-        'format': 'defaultInfo'
-    }
+    """tests if the function returns the correct URL string"""
+    original_url = "http://localhost:8080/qpe/getTagData"
+    final_url = "http://localhost:8080/qpe/getTagData?mode=json&format=defaultInfo"
+    parameters = {"mode": "json", "format": "defaultInfo"}
 
     test_url = tc.update_url_query(original_url, parameters)
 
