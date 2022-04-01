@@ -10,7 +10,6 @@ Documentation:
 * http://flask.pocoo.org/docs/latest/testing/
 """
 
-import pytest
 import src.standalone_scripts.TagConfig as tc
 
 
