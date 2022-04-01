@@ -25,24 +25,25 @@ __author__ = "Quuppa"
 
 from pprint import pprint
 import time
-import requests
 import urllib.parse as urlparse
+
+import requests
 
 
 ################# url strings #################
-qpe_server = "http://localhost:8080"
+QPE_SERVER = "http://localhost:8080"
 # for this script, the getTagData format will not change. Query parameters can be hardcoded
 tag_data_url = urlparse.urljoin(
-    qpe_server, "qpe/getTagData?mode=json&format=defaultInfo"
+    QPE_SERVER, "qpe/getTagData?mode=json&format=defaultInfo"
 )
-config_url = urlparse.urljoin(qpe_server, "qpe/configureTag")
-group_url = urlparse.urljoin(qpe_server, "/qpe/setTagGroup")
+config_url = urlparse.urljoin(QPE_SERVER, "qpe/configureTag")
+group_url = urlparse.urljoin(QPE_SERVER, "/qpe/setTagGroup")
 
 ################# Query Parameters #################
 # the name of the configuration in the project to configure with
-config_id = "ASSET_TAG"
-channel = "37"  # options are 37 BLE or 230 QProprietary
-target_group_name = "AutoConfiguredTags"
+CONFIG_ID = "ASSET_TAG"
+CHANNEL = "37"  # options are 37 BLE or 230 QProprietary
+TARGET_GROUP_NAME = "AutoConfiguredTags"
 
 
 def update_url_query(url: str, query_params: dict) -> str:
@@ -88,7 +89,8 @@ def main():
         tag_data = res.json()["tags"]
 
         for tag in tag_data:
-            # if tag does not have a group name, it has not been configured, if tag is being/has been configured, ignore.
+            # if tag does not have a group name, it has not been configured,
+            # if tag is being/has been configured, ignore.
             if (
                 tag["tagGroupName"] is None
                 and tag["tagId"] not in config_proccess_tags
@@ -99,7 +101,9 @@ def main():
             # check status for tags undergoing configuration
             elif tag["tagId"] in config_proccess_tags:
                 # possible statuses:
-                # aborted, failed, notSupported, waitingToCommand1of3, commanding1of3, commanding2of3, commanding3of3, done, notStarted, waitingForPackets (tag hasn't been seen in a while)
+                # aborted, failed, notSupported, waitingToCommand1of3,
+                # commanding1of3, commanding2of3, commanding3of3,
+                # done, notStarted, waitingForPackets (tag hasn't been seen in a while)
                 # the cases handled here are required to function, even minimally, in most use cases
                 if tag["configStatus"] == "aborted" or tag["configStatus"] == "failed":
                     # configuration failed, drop from id from list to initiate another attempt
@@ -122,8 +126,8 @@ def main():
             # build the configure request url
             query_parameters = {
                 "tag": ",".join(unconfigured_tag),  # comma seperated string of tag ids
-                "channel": channel,  # the tags target channel
-                "id": config_id,  # id of the configuration in the project
+                "channel": CHANNEL,  # the tags target channel
+                "id": CONFIG_ID,  # id of the configuration in the project
             }
             conf_req = update_url_query(config_url, query_parameters)
             res = requests.get(conf_req)
@@ -140,7 +144,7 @@ def main():
         if len(ungrouped_tags) > 0:
             query_parameters = {
                 "tag": ",".join(ungrouped_tags),  # comma seperated string of tag ids
-                "targetGroup": target_group_name,  # the tags target group
+                "targetGroup": TARGET_GROUP_NAME,  # the tags target group
             }
             group_req = update_url_query(group_url, query_parameters)
             res = requests.get(group_req)
