@@ -28,6 +28,9 @@ class QpeUrlCompendium:
         self.get_tag_data_defaultLocationAndInfo = "/".join(
             [self.base_url, "getTagData?mode=json&format=defaultLocationAndInfo"]
         )
+        self.get_tag_data_all_items = "/".join(
+            [self.base_url, "getTagData?mode=json&format=ALL_ITEMS"]
+        )
 
     @staticmethod
     def update_url_query(url: str, query_params: dict) -> str:
