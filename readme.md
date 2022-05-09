@@ -6,8 +6,12 @@ This is a set of examples about the spirit and particulars of the Quuppa Positio
 #Setup python virtual environment (highly recommended to leave virtual environment name to venv for gitignore!!!)
 python3 -m venv venv
 
-#activate venv
+#activate venv (linux)
 source ./venv/bin/activate
+
+#activate venv (windows)
+cd venv\\Scripts
+activate
 
 #drop virtual environment
 deactivate
@@ -20,6 +24,20 @@ pytest
 
 ```
 
+Some examples make use of a "keys.json" file. An example of this can be found in "keys/keys_template.json". If credentials are needed, make a copy of this and name the copy "keys.json" and populate it as described in the examples documentation/comments. Typical usage will load the file and use an entry similar to:
+
+```json
+{
+    "influx_db_system_monitor": {
+        "token": "<your influx token>",
+        "org": "<your influx org>",
+        "url": "<your url e.g. https://eu-central-1-1.aws.cloud2.influxdata.com>",
+        "bucket": "SystemMonitor"
+    }
+}
+```
+
+=======
 ## Current style related decisions - PEP8
 
 PEP8, except with max line length 120
@@ -50,3 +68,4 @@ pip install black
 Black follows PEP8, but line length can be modified via command line argument:
 
 black --line-length 120 \<file>
+>>>>>>> readme.md
