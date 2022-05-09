@@ -1,5 +1,18 @@
 {
-    "python.linting.pylintEnabled": true,
+    "python.linting.pylintEnabled": false,
     "python.linting.enabled": true,
-    "python.linting.flake8Enabled": false
+    "python.linting.flake8Enabled": false,
+    "python.formatting.blackPath": "black",
+    "python.formatting.blackArgs": [],
+    "python.linting.mypyEnabled": true,
+    "editor.formatOnSave": true,
+    "python.formatting.provider": "black",
+    "cSpell.words": [
+        "creds"
+    ],
+    "python.testing.pytestArgs": [
+        "tests"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true
 }

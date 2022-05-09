@@ -2,3 +2,5 @@ black==22.3.0
 pytest==7.1.1
 requests==2.27.1
 urllib3==1.26.9
+influxdb-client==1.28.0
+mypy==0.950

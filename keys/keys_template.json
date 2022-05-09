@@ -1,0 +1,8 @@
+{
+    "influx_db_system_monitor": {
+        "token": "<your influx token>",
+        "org": "<your influx org>",
+        "url": "<your url e.g. https://eu-central-1-1.aws.cloud2.influxdata.com>",
+        "bucket": "SystemMonitor"
+    }
+}
