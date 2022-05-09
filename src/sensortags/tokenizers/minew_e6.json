@@ -1,0 +1,13 @@
+{
+    "name": "minew_e6",
+    "description": "light sensor, the light sensor group will be 00 for dark and 01 for light",
+    "regex": "0201060303e1ff[0-9a-z]{2}16e1ffa10264([0-1]{2})([0-9a-z]{12})",
+    "groups": [
+        "light_sensor_value",
+        "little_endian_mac"
+    ],
+    "post_processing": true,
+    "project_tag_ids": [
+        "ac233fa29a16"
+    ]
+}

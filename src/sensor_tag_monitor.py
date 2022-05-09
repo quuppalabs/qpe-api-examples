@@ -1,17 +1,18 @@
 import argparse
 import logging
+import pprint
 import time
 import requests
 
 from helpers.urls import QpeUrlCompendium
-from src.helpers.influxdata import GatewayTag, InfluxPoint
-import src.helpers.startup as startup
+from sensortags.sensordata import GatewayTag, InfluxPoint
+import helpers.startup as startup
 from influxdb_client import InfluxDBClient, Point, WritePrecision
 from influxdb_client.client.write_api import SYNCHRONOUS
 from influxdb_client.rest import ApiException
 
 
-def post_point_to_influx(point):
+def post_point_to_influx(point: dict):
     log = logging.getLogger("SensorMon")
 
     influx_creds = startup.get_influx_credentials()
@@ -44,7 +45,7 @@ def get_sensors_values(qpe_base_url: str) -> list[GatewayTag]:
     res = requests.get(qpe_urls.get_tag_data_all_items)
     if res.status_code == 200:  # check request success
         raw_data = res.json()
-        if raw_data["code"] == 0:  # check QPE response
+        if raw_data["code"] == "0":  # check QPE response
             gateway_data = [  # filter out tags without gateway data
                 tag for tag in raw_data["tags"] if tag["advertisingDataPayload"] != None
             ]
@@ -56,7 +57,7 @@ def get_sensors_values(qpe_base_url: str) -> list[GatewayTag]:
         else:
             gateway_data = None
             log.error(
-                f'Expected QPE code 0, got: {gateway_data["code"]} ... no data received'
+                f'Expected QPE code 0, got: {raw_data["code"]} ... no data received'
             )
     else:
         gateway_data = None
@@ -82,5 +83,20 @@ if __name__ == "__main__":
         f"Started with QPE base url: {args.qpe_addr} and polling every {args.poll_interval} seconds"
     )
     while True:
-        pass
-    time.sleep(args.poll_interval)
+        tags = get_sensors_values(args.qpe_addr)
+        for tag in tags:
+            if tag.tokenize_data():
+                influx_dict = None  # default incase tag is parsed but not posted
+                if tag._tokenizer["name"] == "minew_e6":
+                    influx_dict = tag.as_influx_point_dict(
+                        tag_keys=["tagId"], fields_to_ignore=["little_endian_mac"]
+                    )
+
+                if influx_dict:
+                    log.info(f"Collected sensor data: {pprint.pformat(influx_dict)}")
+                    post_point_to_influx(influx_dict)
+
+            else:
+                log.warning(f"No parser found for tag: {pprint.pformat(tag)}")
+
+        time.sleep(args.poll_interval)

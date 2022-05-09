@@ -1,5 +1,6 @@
 from dataclasses import dataclass, fields
 from functools import cache
+import importlib
 import json
 from pathlib import Path
 from re import compile, match, Match
@@ -76,7 +77,7 @@ class InfluxPoint:
         class_fields = [key for key in cls.__dict__["__dataclass_fields__"].keys()]
 
         # drop the leading '_'
-        class_fields = map(lambda x: x[1::] if x[0] == "_" else x, class_fields)
+        class_fields = list(map(lambda x: x[1::] if x[0] == "_" else x, class_fields))
 
         attr_values = {
             key: val for (key, val) in raw_data.items() if key in class_fields
@@ -124,7 +125,7 @@ class InfluxPoint:
             instance_attrs = self.__dict__
 
         if measurement_key == None:
-            measurement_key = self.__class__
+            measurement_key = "GatewayTags"
 
         return self.dict_to_influx_point_dict(
             instance_attrs, measurement_key, tag_keys, fields_to_ignore
@@ -159,6 +160,15 @@ class QpeInfoData(InfluxPoint):
         tag_keys: list = None,
         fields_to_ignore: list = None,
     ) -> dict:
+        """overrides base class method and left overly gereralized for
+        ease of later extension
+
+        Args:
+            same as base class
+
+        Returns:
+            dict: same as base class
+        """
         if data == None:
             data = self.__dict__
         return super().as_influx_point_dict(
@@ -175,37 +185,90 @@ class GatewayTag(InfluxPoint):
     advertisingDataPayloadLocatorId: str
     advertisingDataPayloadLocatorName: str
 
-    def parse_data(self, parser: dict=None]) -> bool:
+    def tokenize_data(self, tokenizer: dict = None) -> bool:
+        """attempts to load a parser if none is provided and then
+        parse the data accordingly. If the parsing could not complete
+        False is returned other wise true
 
-        if not regex:
-            parser = get_parser_for_tag_id(self.tagId)
+        Args:
+            parser (dict, optional): The parser dict to use. Defaults to None.
 
-        search_string = compile(regex)
-        if result := match(self._advertisingDataPayload):
-            try:
-                for (name, val) in zip(groups, result.group(), strict=True):
-                    setattr(self, name, val)
-            except ValueError:
+        Returns:
+            bool: False on failure to parse, True on success
+        """
+        if not tokenizer:
+            tokenizer = get_tokenizer_for_tag_id(self.tagId)
+
+            if not tokenizer:
                 return False
+        adv_data = "".join(
+            [byte[2::] for byte in self.advertisingDataPayload.split(" ")]
+        )
+
+        search_string = compile(tokenizer["regex"])
+        if result := match(search_string, adv_data):
+            setattr(self, "_tokenizer", tokenizer)
+
+            if tokenizer["post_processing"]:
+                try:
+                    post_proc_mod = importlib.import_module(
+                        f"sensortags.postprocessors.{tokenizer['name']}"
+                    )
+                    values: dict = post_proc_mod.process_adv_data(result, tokenizer)
+                except ImportError:
+                    raise ImportError("Not able to find import")
+                    return False
+                for (name, val) in values.items():
+                    setattr(self, name, val)
+
+            else:
+                try:
+                    for (name, val) in zip(
+                        tokenizer["groups"], result.groups(), strict=True
+                    ):
+                        setattr(self, name, val)
+                except ValueError:
+                    return False
+
+        else:
+            return False
 
         return True
 
-    def as_influx_point_dict(self) -> dict:
-        return super().as_influx_point_dict(
-            fields_to_ignore=[
+    def as_influx_point_dict(
+        self,
+        fields: dict = None,
+        measurement_key: str = None,
+        tag_keys: list = None,
+        fields_to_ignore: list = None,
+    ) -> dict:
+
+        if not fields_to_ignore:
+            fields_to_ignore = [
                 "advertisingDataPayload",
                 "advertisingDataPayloadTS",
                 "advertisingDataPayloadSignalStrength",
                 "advertisingDataPayloadLocatorId",
                 "advertisingDataPayloadLocatorName",
             ]
+        else:
+            fields_to_ignore += [
+                "advertisingDataPayload",
+                "advertisingDataPayloadTS",
+                "advertisingDataPayloadSignalStrength",
+                "advertisingDataPayloadLocatorId",
+                "advertisingDataPayloadLocatorName",
+            ]
+
+        return super().as_influx_point_dict(
+            fields, measurement_key, tag_keys, fields_to_ignore
         )
 
 
 @cache
-def get_parser_for_tag_id(id: str) -> dict:
-    """parses files in parsers/ dir until tag id
-    that is associated with a parser is found. This
+def get_tokenizer_for_tag_id(id: str) -> dict:
+    """parses files in tokenizers/ dir until tag id
+    that is associated with a tokenizer is found. This
     function is not associated with any class for
     organizational reasons but also to maximize
     performance via cacheing. If it is made part of
@@ -217,7 +280,7 @@ def get_parser_for_tag_id(id: str) -> dict:
     Returns:
         dict: parser if found, empty dict otherwise
     """
-    for fp in Path("parsers").iterdir():
+    for fp in Path("src/sensortags/tokenizers").iterdir():
         if fp.suffix == ".json":
             with open(fp, "r") as json_file:
                 parser_data = json.load(json_file)
