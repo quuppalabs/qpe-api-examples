@@ -6,8 +6,6 @@ You can auto-discover and run all tests with this command:
 Documentation:
 
 * https://docs.pytest.org/en/latest/
-* https://docs.pytest.org/en/latest/fixture.html
-* http://flask.pocoo.org/docs/latest/testing/
 """
 
 import src.standalone_scripts.auto_tag_config as tc

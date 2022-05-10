@@ -8,10 +8,8 @@ from re import compile, match, Match
 
 @dataclass
 class InfluxPoint:
-    """This class provides the foundation for translating json
-    response into a data class,  esp. from a QPE. Note: it is highly reccomended
-    to implement some wrapper function for generating Influx data from
-    _dict_to_influx_point_dict if the expected usage is known
+    """This class provides the foundation for translating a json
+    response into a data class, esp. from a QPE.
     """
 
     @staticmethod
@@ -160,7 +158,7 @@ class QpeInfoData(InfluxPoint):
         tag_keys: list = None,
         fields_to_ignore: list = None,
     ) -> dict:
-        """overrides base class method and left overly gereralized for
+        """overrides base class method and left overly generalized for
         ease of later extension
 
         Args:
@@ -178,6 +176,14 @@ class QpeInfoData(InfluxPoint):
 
 @dataclass
 class GatewayTag(InfluxPoint):
+    """Class that handles converting a json dict into
+    class field values and finding a tokenizer(tk)/post processor for
+    the data given. Finding the correct tokenizer is done after
+    creation, but could be done before hand to aid in extension
+    via inheritance. The module function: get_tokenizer_for_tag_id
+    is external and cached for this purpose...
+    """
+
     tagId: str
     advertisingDataPayload: str
     advertisingDataPayloadTS: int
@@ -199,38 +205,45 @@ class GatewayTag(InfluxPoint):
         if not tokenizer:
             tokenizer = get_tokenizer_for_tag_id(self.tagId)
 
-            if not tokenizer:
+            if not tokenizer:  # if a tokenizer could not me identified
                 return False
-        adv_data = "".join(
+
+        adv_data = "".join(  # 0xbe 0xac ... -> beac...
             [byte[2::] for byte in self.advertisingDataPayload.split(" ")]
         )
 
         search_string = compile(tokenizer["regex"])
-        if result := match(search_string, adv_data):
-            setattr(self, "_tokenizer", tokenizer)
 
-            if tokenizer["post_processing"]:
+        if result := match(search_string, adv_data):
+            setattr(self, "_tokenizer", tokenizer)  # store tk to instance attributes
+
+            if tokenizer["post_processing"]:  # tk says post proc required
                 try:
                     post_proc_mod = importlib.import_module(
                         f"sensortags.postprocessors.{tokenizer['name']}"
                     )
+                    # every post proc module must implement this function
                     values: dict = post_proc_mod.process_adv_data(result, tokenizer)
                 except ImportError:
+                    # if a post proc module could not be found this is
+                    # almost 100% a critical error
                     raise ImportError("Not able to find import")
-                    return False
-                for (name, val) in values.items():
+
+                for (name, val) in values.items():  # store values as attributes
                     setattr(self, name, val)
 
             else:
                 try:
                     for (name, val) in zip(
                         tokenizer["groups"], result.groups(), strict=True
-                    ):
+                    ):  # no post proc required, values from tk group names used
                         setattr(self, name, val)
                 except ValueError:
+                    # if the group names list length doesn't match
+                    # the amount of groups found there was a tokenization error
                     return False
 
-        else:
+        else:  # adv data did not match the format expected by tokenizer
             return False
 
         return True
@@ -242,7 +255,7 @@ class GatewayTag(InfluxPoint):
         tag_keys: list = None,
         fields_to_ignore: list = None,
     ) -> dict:
-
+        """formatting override to base class method"""
         if not fields_to_ignore:
             fields_to_ignore = [
                 "advertisingDataPayload",
