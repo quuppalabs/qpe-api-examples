@@ -140,13 +140,15 @@ while True:
                 "fields": {  # fields of interest selected here
                     "cpuLoad": data["cpuLoad"],
                     "issues": len(data["issues"]),
-                    "memoryAllocated": data["memoryAllocated"] / 1024,
-                    "memoryFree": data["memoryFree"] / 1024,
-                    "percentMemoryUsed": data["memoryUsed"] / data["memoryMax"],
-                    "packetsPerSecond": data["packetsPerSecond"],
+                    "memoryAllocated": data["memoryAllocated"] / 1024.0,
+                    "memoryFree": data["memoryFree"] / 1024.0,
+                    "percentMemoryUsed": float(data["memoryUsed"]) / float(data["memoryMax"]),  # fmt: skip
+                    "packetsPerSecond": float(data["packetsPerSecond"]),
                     "running": data["running"],
-                    "udpRx": data["udpRx"],
-                    "udpTx": data["udpTx"],
+                    "udpRx": float(data["udpRx"]),
+                    "udpTx": float(data["udpTx"]),
+                    "networkLossRate": float(data["networkLossRate"]),
+                    "qpeLossRate": float(data["qpeLossRate"]),
                     # note if additional processing is required it could readily be done
                     # like the following:
                     # "someField": data_processing_func(data["some_key"])
