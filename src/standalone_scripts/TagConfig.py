@@ -7,7 +7,8 @@ This script handles only the most basic parts of automatically configured tags.
 There are many ways this could be extended including, but not limited to:
 - Handling tags that do not support configuration
 - Persisting the data of configured tags with the import/export tag commands
-- Handling tags that have a low battery or repeatedly fail to configure
+- Handling tags that have a low battery 
+- Handling tags repeatedly fail to configure
 
 The general process is as follows:
 - Get all tags
@@ -72,7 +73,7 @@ def main():
 
     # initialize the lists of tags in different process states
     unconfigured_tag = []
-    config_proccess_tags = []
+    config_process_tags = []
     ungrouped_tags = []
 
     while True:
@@ -93,13 +94,13 @@ def main():
             # if tag is being/has been configured, ignore.
             if (
                 tag["tagGroupName"] is None
-                and tag["tagId"] not in config_proccess_tags
+                and tag["tagId"] not in config_process_tags
                 and tag["tagId"] not in ungrouped_tags
             ):
                 unconfigured_tag.append(tag["tagId"])
 
             # check status for tags undergoing configuration
-            elif tag["tagId"] in config_proccess_tags:
+            elif tag["tagId"] in config_process_tags:
                 # possible statuses:
                 # aborted, failed, notSupported, waitingToCommand1of3,
                 # commanding1of3, commanding2of3, commanding3of3,
@@ -108,16 +109,16 @@ def main():
                 if tag["configStatus"] == "aborted" or tag["configStatus"] == "failed":
                     # configuration failed, drop from id from list to initiate another attempt
                     unconfigured_tag.append(tag["tagId"])
-                    config_proccess_tags.remove(tag["tagId"])
+                    config_process_tags.remove(tag["tagId"])
                 elif tag["configStatus"] == "done":
                     ungrouped_tags.append(tag["tagId"])
-                    config_proccess_tags.remove(tag["tagId"])
+                    config_process_tags.remove(tag["tagId"])
 
         print()
         print("Unconfigured IDs:")
         pprint(unconfigured_tag)
-        print("In Proccess IDs:")
-        pprint(config_proccess_tags)
+        print("In Process IDs:")
+        pprint(config_process_tags)
         print("Ungrouped IDs:")
         pprint(ungrouped_tags)
 
@@ -125,7 +126,7 @@ def main():
         if len(unconfigured_tag) > 0:
             # build the configure request url
             query_parameters = {
-                "tag": ",".join(unconfigured_tag),  # comma seperated string of tag ids
+                "tag": ",".join(unconfigured_tag),  # comma separated string of tag ids
                 "channel": CHANNEL,  # the tags target channel
                 "id": CONFIG_ID,  # id of the configuration in the project
             }
@@ -134,7 +135,7 @@ def main():
 
             if res.status_code == 200:
                 # configuration request was successful
-                config_proccess_tags += unconfigured_tag
+                config_process_tags += unconfigured_tag
 
             unconfigured_tag = []
 
@@ -143,7 +144,7 @@ def main():
         ################# Request tags to be added to group #################
         if len(ungrouped_tags) > 0:
             query_parameters = {
-                "tag": ",".join(ungrouped_tags),  # comma seperated string of tag ids
+                "tag": ",".join(ungrouped_tags),  # comma separated string of tag ids
                 "targetGroup": TARGET_GROUP_NAME,  # the tags target group
             }
             group_req = update_url_query(group_url, query_parameters)
