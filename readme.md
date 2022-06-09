@@ -69,3 +69,12 @@ Black follows PEP8, but line length can be modified via command line argument:
 
 black --line-length 120 \<file>
 >>>>>>> readme.md
+
+## Sensor Tag Tokenizer Requirements
+
+Every Tokenizer module must implement:
+
+- a tags list for manual assignment of tag IDs
+- tokens_reg_ex for tokenizing advertising data into regex groups
+- process_adv_data function for establishing types ata minimum and any additional required post processing or interpretation
+- id_regular_expression for identifying IDs assigned by the manufacturer 

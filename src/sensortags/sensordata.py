@@ -1,9 +1,12 @@
+from ast import Raise
 from dataclasses import dataclass, fields
 from functools import cache
 import importlib
 import json
 from pathlib import Path
-from re import compile, match, Match
+from re import compile, match, Match, VERBOSE
+from types import ModuleType
+import warnings
 
 
 @dataclass
@@ -191,10 +194,12 @@ class GatewayTag(InfluxPoint):
     advertisingDataPayloadLocatorId: str
     advertisingDataPayloadLocatorName: str
 
-    def tokenize_data(self, tokenizer: dict = None) -> bool:
-        """attempts to load a parser if none is provided and then
-        parse the data accordingly. If the parsing could not complete
-        False is returned other wise true
+    def tokenize_data(
+        self, device_type: str = None, tokenizer: ModuleType = None
+    ) -> bool:
+        """attempts to load a tokenizer if none is provided and then
+        tokenize the data accordingly. If the parsing could not complete
+        False is returned otherwise true
 
         Args:
             parser (dict, optional): The parser dict to use. Defaults to None.
@@ -202,51 +207,82 @@ class GatewayTag(InfluxPoint):
         Returns:
             bool: False on failure to parse, True on success
         """
-        if not tokenizer:
-            tokenizer = get_tokenizer_for_tag_id(self.tagId)
-
-            if not tokenizer:  # if a tokenizer could not me identified
-                return False
 
         adv_data = "".join(  # 0xbe 0xac ... -> beac...
             [byte[2::] for byte in self.advertisingDataPayload.split(" ")]
         )
 
-        search_string = compile(tokenizer["regex"])
+        if not tokenizer:
+            tokenizer = self.get_tokenizer_for_tag_id(self.tagId, adv_data, device_type)
 
-        if result := match(search_string, adv_data):
+            if not tokenizer:  # if a tokenizer could not me identified
+                return False
+
+        if result := match(tokenizer.tokens_reg_ex, adv_data, VERBOSE):
             setattr(self, "_tokenizer", tokenizer)  # store tk to instance attributes
+            setattr(self, "_device_type", tokenizer.__name__.split(".")[2])
 
-            if tokenizer["post_processing"]:  # tk says post proc required
-                try:
-                    post_proc_mod = importlib.import_module(
-                        f"sensortags.postprocessors.{tokenizer['name']}"
-                    )
-                    # every post proc module must implement this function
-                    values: dict = post_proc_mod.process_adv_data(result, tokenizer)
-                except ImportError:
-                    # if a post proc module could not be found this is
-                    # almost 100% a critical error
-                    raise ImportError("Not able to find import")
+            # every post proc module must implement this function
+            values: dict = tokenizer.process_adv_data(result)
 
-                for (name, val) in values.items():  # store values as attributes
-                    setattr(self, name, val)
+            for (name, val) in values.items():  # store values as attributes
+                setattr(self, name, val)
 
-            else:
-                try:
-                    for (name, val) in zip(
-                        tokenizer["groups"], result.groups(), strict=True
-                    ):  # no post proc required, values from tk group names used
-                        setattr(self, name, val)
-                except ValueError:
-                    # if the group names list length doesn't match
-                    # the amount of groups found there was a tokenization error
-                    return False
+            return True
 
         else:  # adv data did not match the format expected by tokenizer
             return False
 
-        return True
+    @staticmethod
+    def get_tokenizer_for_tag_id(
+        id: str, payload: str, device_type: str = None
+    ) -> ModuleType:
+        """parses files in tokenizers/ dir until tag id
+        that is associated with a tokenizer is found. Alternatively
+        if and ID based match isn't made an attempt to match based
+        on the packet format is also made.
+
+        Args:
+            id (str): tag id to be found
+
+        Returns:
+            dict: parser if found, empty dict otherwise
+        """
+
+        for fp in Path("src/sensortags/tokenizers").iterdir():
+            if device_type == fp.stem:
+                try:
+                    tokenizer_mod = importlib.import_module(
+                        f"sensortags.tokenizers.{fp.stem}"
+                    )
+
+                    return tokenizer_mod
+
+                except ImportError:
+                    warnings.warn(
+                        f"""A device type was specified for device id: {id} 
+                        but a tokenizer could not be found. 
+                        Maybe the type name was misspelled...""",
+                    )
+                    return None
+
+            elif fp.suffix == ".py":
+                try:
+                    tokenizer_mod = importlib.import_module(
+                        f"sensortags.tokenizers.{fp.stem}"
+                    )
+
+                    if match(tokenizer_mod.tokens_reg_ex, payload, VERBOSE):
+                        return tokenizer_mod
+
+                except ImportError:
+                    # if a post proc module could not be found this is
+                    # almost 100% a critical error
+                    raise ImportError(
+                        f"{fp.name} should be an importable module but is not"
+                    )
+
+        return None
 
     def as_influx_point_dict(
         self,
@@ -274,29 +310,5 @@ class GatewayTag(InfluxPoint):
             ]
 
         return super().as_influx_point_dict(
-            fields, measurement_key, tag_keys, fields_to_ignore
+            fields, self._device_type, tag_keys, fields_to_ignore
         )
-
-
-@cache
-def get_tokenizer_for_tag_id(id: str) -> dict:
-    """parses files in tokenizers/ dir until tag id
-    that is associated with a tokenizer is found. This
-    function is not associated with any class for
-    organizational reasons but also to maximize
-    performance via cacheing. If it is made part of
-    a class, each instance would have its own cache...
-
-    Args:
-        id (str): tag id to be found
-
-    Returns:
-        dict: parser if found, empty dict otherwise
-    """
-    for fp in Path("src/sensortags/tokenizers").iterdir():
-        if fp.suffix == ".json":
-            with open(fp, "r") as json_file:
-                parser_data = json.load(json_file)
-                if id in parser_data["project_tag_ids"]:
-                    return parser_data
-    return {}
