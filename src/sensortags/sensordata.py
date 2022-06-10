@@ -220,7 +220,7 @@ class GatewayTag(InfluxPoint):
 
         if result := match(tokenizer.tokens_reg_ex, adv_data, VERBOSE):
             setattr(self, "_tokenizer", tokenizer)  # store tk to instance attributes
-            setattr(self, "_device_type", tokenizer.__name__.split(".")[2])
+            setattr(self, "_packet_type", tokenizer.__name__.split(".")[2])
 
             # every post proc module must implement this function
             values: dict = tokenizer.process_adv_data(result)
@@ -297,7 +297,6 @@ class GatewayTag(InfluxPoint):
                 "advertisingDataPayload",
                 "advertisingDataPayloadTS",
                 "advertisingDataPayloadSignalStrength",
-                "advertisingDataPayloadLocatorId",
                 "advertisingDataPayloadLocatorName",
             ]
         else:
@@ -305,10 +304,12 @@ class GatewayTag(InfluxPoint):
                 "advertisingDataPayload",
                 "advertisingDataPayloadTS",
                 "advertisingDataPayloadSignalStrength",
-                "advertisingDataPayloadLocatorId",
                 "advertisingDataPayloadLocatorName",
             ]
 
         return super().as_influx_point_dict(
-            fields, self._device_type, tag_keys, fields_to_ignore
+            fields,
+            self._packet_type,
+            tag_keys,
+            fields_to_ignore,
         )

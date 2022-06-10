@@ -133,7 +133,7 @@ if __name__ == "__main__":
         f"Started with QPE base url: {args.qpe_addr} and polling every {args.poll_interval} seconds"
     )
 
-    tag_device_types = {
+    tag_packet_types = {
         "ac233fa29a16": "minew_e6",
         # "ac233fab8231": "minew_s1",
     }
@@ -143,7 +143,7 @@ if __name__ == "__main__":
         tags = get_sensors_values(args.qpe_addr)
         for tag in tags:
             if tag.tokenize_data(
-                tag_device_types.get(tag.tagId)
+                tag_packet_types.get(tag.tagId)
             ):  # if tag was successfully processed
                 influx_dict = None  # default incase tag is parsed but not posted
 
@@ -151,7 +151,7 @@ if __name__ == "__main__":
                 influx_dict = tag.as_influx_point_dict(
                     # make the tagId an Influx tag and do not collect
                     # little_endian_mac as a field value
-                    tag_keys=["tagId"],
+                    tag_keys=["tagId", "advertisingDataPayloadLocatorId"],
                 )
                 # else:#any tags that are not formatted specially
                 #     influx_dict = tag.as_influx_point_dict()
