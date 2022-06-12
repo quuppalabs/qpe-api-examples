@@ -1,4 +1,6 @@
 venv
 **__pycache__**
-keys/keys.json
+keys/**
+!keys/keys_template.json
 logs
+.vscode/launch.json
