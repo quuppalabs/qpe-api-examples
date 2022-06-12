@@ -193,6 +193,7 @@ class GatewayTag(InfluxPoint):
     advertisingDataPayloadSignalStrength: float
     advertisingDataPayloadLocatorId: str
     advertisingDataPayloadLocatorName: str
+    _packet_type: str = None
 
     def tokenize_data(
         self, device_type: str = None, tokenizer: ModuleType = None
@@ -220,7 +221,7 @@ class GatewayTag(InfluxPoint):
 
         if result := match(tokenizer.tokens_reg_ex, adv_data, VERBOSE):
             setattr(self, "_tokenizer", tokenizer)  # store tk to instance attributes
-            setattr(self, "_packet_type", tokenizer.__name__.split(".")[2])
+            self._packet_type = tokenizer.__name__.split(".")[2]
 
             # every post proc module must implement this function
             values: dict = tokenizer.process_adv_data(result)
