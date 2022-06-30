@@ -107,7 +107,7 @@ with open("keys/keys.json") as json_file:
 
 
 influx = influxdb_client.InfluxDBClient(
-    url=influx_creds["url"], token=influx_creds["token"], org=influx_creds["org"]
+    url=influx_creds["url"], token=influx_creds["token"], org=influx_creds["org"], verify_ssl=False
 )
 write_api = influx.write_api(write_options=SYNCHRONOUS)
 
