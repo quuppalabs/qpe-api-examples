@@ -10,7 +10,7 @@ Documentation:
 * http://flask.pocoo.org/docs/latest/testing/
 """
 
-import src.standalone_scripts.TagConfig as tc
+import src.standalone_scripts.auto_tag_config as tc
 
 
 def test_update_url_query():
