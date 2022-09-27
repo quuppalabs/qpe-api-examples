@@ -1,18 +1,87 @@
 {
-    "python.linting.pylintEnabled": false,
-    "python.linting.enabled": true,
-    "python.linting.flake8Enabled": false,
-    "python.formatting.blackPath": "black",
-    "python.formatting.blackArgs": [],
-    "python.linting.mypyEnabled": true,
-    "editor.formatOnSave": true,
-    "python.formatting.provider": "black",
-    "cSpell.words": [
-        "creds"
-    ],
     "python.testing.pytestArgs": [
-        "tests"
+        ".",
+        "-vv",
+        "--cov=src",
+        "--cov-report html",
+        "--html=test_run_report.html",
+        "--self-contained-html"
     ],
     "python.testing.unittestEnabled": false,
-    "python.testing.pytestEnabled": true
+    "python.testing.pytestEnabled": true,
+    "python.testing.unittestArgs": [
+        "-vv",
+        "-s",
+        ".",
+        "-p",
+        "test_*.py"
+    ],
+    "pytest.command": "venv/bin/pytest",
+    "cSpell.ignorePaths": [
+        "package-lock.json",
+        "node_modules",
+        "vscode-extension",
+        ".git/objects",
+        ".vscode",
+        ".vscode-insiders",
+        "__pycache__",
+        "venv"
+    ],
+    "todo-tree.general.statusBar": "current file",
+    "todo-tree.general.tags": [
+        "BUG",
+        "HACK",
+        "FIXME",
+        "TODO",
+        "XXX",
+        "[ ]",
+        "[x]",
+        "todo:"
+    ],
+    "cSpell.userWords": [
+        "comms",
+        "dearpygui",
+        "gpioin",
+        "ibeacon",
+        "JLINK",
+        "jsonschema",
+        "Kivy",
+        "logzero",
+        "nrfjprog",
+        "pformat",
+        "pkgs",
+        "pytest",
+        "pythonic",
+        "Quuppa",
+        "refactorings",
+        "rssi",
+        "secureconf",
+        "silabs",
+        "smoketest",
+        "smoketests",
+        "Sourcery",
+        "tagtester",
+        "Unconfigured",
+        "urlunparse",
+        "venv"
+    ],
+    "python.formatting.blackPath": "venv/bin/black",
+    "python.formatting.provider": "black",
+    "python.linting.mypyEnabled": true,
+    "git.allowForcePush": true,
+    "python.formatting.blackArgs": [
+        "--line-length=119"
+    ],
+    "editor.stickyScroll.enabled": true,
+    "python.sortImports.path": "/home/nick/Repos/Software_Engineer_Testing_Python_v1_0_data/venv/bin/isort",
+    "python.sortImports.args": [
+        "--profile",
+        "black"
+    ],
+    "[python]": {
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": true
+        }
+    },
+    "pythonTestExplorer.testFramework": "pytest"
 }
