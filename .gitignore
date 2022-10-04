@@ -4,3 +4,4 @@ keys/**
 !keys/keys_template.json
 logs
 .vscode/launch.json
+site/**

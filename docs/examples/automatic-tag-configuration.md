@@ -1,0 +1,1 @@
+::: src.standalone_scripts.auto_tag_config

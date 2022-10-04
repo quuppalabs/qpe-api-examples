@@ -8,7 +8,8 @@ with a base example.
 The script expects a keys.json file to be available, which is
 described further on in the script for use with Influx DB.
 
-The general process is as follows:
+The general process is as follows
+
 - Setup 
     - Logging
     - URLs

@@ -22,8 +22,8 @@ pip install -r requirements.txt
 ## Commands
 
 ```python
-# basic usage
-python src/replace_me
+# basic usage for most scripts is
+python src/some_script.py [args]
 
 ```
 
@@ -150,8 +150,3 @@ Formatting is enforced via black and documentation generally follows [Google's S
         }
     ]
 ```
-
-## Reference
-
-
-
