@@ -7,7 +7,6 @@ to aid in rapid development of scripts to extract application specific data alon
 with a base example.
 The script expects a keys.json file to be available, which is
 described further on in the script for use with Influx DB.
-The libraires imported do not invoke the logging module.
 
 The general process is as follows:
 - Setup 
@@ -30,14 +29,15 @@ import argparse
 import logging
 import pprint
 import time
-import requests
 
-from helpers.urls import QpeUrlCompendium
-from sensortags.sensordata import GatewayTag, InfluxPoint
-import helpers.startup as startup
+import requests
 from influxdb_client import InfluxDBClient, Point, WritePrecision
 from influxdb_client.client.write_api import SYNCHRONOUS
 from influxdb_client.rest import ApiException
+
+import helpers.startup as startup
+from helpers.urls import QpeUrlCompendium
+from sensortags.sensordata import GatewayTag, InfluxPoint
 
 
 def post_point_to_influx(point: dict):
@@ -52,9 +52,7 @@ def post_point_to_influx(point: dict):
 
     ################# setup for influx ##########
     influx_creds = startup.get_influx_credentials()
-    influx = InfluxDBClient(
-        url=influx_creds["url"], token=influx_creds["token"], org=influx_creds["org"]
-    )
+    influx = InfluxDBClient(url=influx_creds["url"], token=influx_creds["token"], org=influx_creds["org"])
     write_api = influx.write_api(write_options=SYNCHRONOUS)
 
     ################# post data #################
@@ -95,20 +93,16 @@ def get_sensors_values(qpe_base_url: str) -> list[GatewayTag]:
             gateway_data = [  # filter out tags without gateway data
                 tag for tag in qpe_res["tags"] if tag["advertisingDataPayload"] != None
             ]
-            log.info(f"Got data from QPE")
+            # log.info(f"Got data from QPE: {gateway_data}")
 
         elif qpe_res["code"] == 11:  # qpe not in track mode
             log.warning("QPE not in track mode, no data acquisition possible")
         else:
             gateway_data = None
-            log.error(
-                f'Expected QPE code 0, got: {qpe_res["code"]} ... no data received'
-            )
+            log.error(f'Expected QPE code 0, got: {qpe_res["code"]} ... no data received')
     else:
         gateway_data = None
-        log.error(
-            f"Expected response code 200, got: {base_res.code} ... no data received"
-        )
+        log.error(f"Expected response code 200, got: {base_res.code} ... no data received")
 
     if gateway_data:  # if valid data was gathered attempt to convert to GatewayTags
         gateway_tags = [GatewayTag.from_any_dict(tag) for tag in gateway_data]
@@ -121,17 +115,17 @@ def get_sensors_values(qpe_base_url: str) -> list[GatewayTag]:
 
 if __name__ == "__main__":
     ################# Config and Resource Init #################
+
     parser = argparse.ArgumentParser(description="Monitor QPE Resources")
     startup.add_qpe_base_url_arg(parser)
     startup.add_poll_interval_arg(parser)
     startup.add_id_arg(parser)
     args = parser.parse_args()
+
     startup.configure_logging()
     log: logging.Logger = logging.getLogger("SensorMon")
 
-    log.info(
-        f"Started with QPE base url: {args.qpe_addr} and polling every {args.poll_interval} seconds"
-    )
+    log.info(f"Started with QPE base url: {args.qpe_addr} and polling every {args.poll_interval} seconds")
 
     tag_packet_types = {
         "ac233fa29a16": "minew_e6",
@@ -142,9 +136,7 @@ if __name__ == "__main__":
         ################# get data and process it #################
         tags = get_sensors_values(args.qpe_addr)
         for tag in tags:
-            if tag.tokenize_data(
-                tag_packet_types.get(tag.tagId)
-            ):  # if tag was successfully processed
+            if tag.tokenize_data(tag_packet_types.get(tag.tagId)):  # if tag was successfully processed
                 influx_dict = None  # default incase tag is parsed but not posted
 
                 # if tag.device_type == "minew_e6":  # Influx bucket specific formatting

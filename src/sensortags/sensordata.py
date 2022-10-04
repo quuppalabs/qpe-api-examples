@@ -1,12 +1,19 @@
+""" A module for converting data from a typical QPE data point to an influx point
+
+    This module is intended to be used as a helper for the data extracted from the QPE
+    API. The data is intended to be used with the influx_db_client module to post
+    data to an influx db instance.
+"""
+
+import importlib
+import json
+import warnings
 from ast import Raise
 from dataclasses import dataclass, fields
 from functools import cache
-import importlib
-import json
 from pathlib import Path
-from re import compile, match, Match, VERBOSE
+from re import VERBOSE, Match, compile, match
 from types import ModuleType
-import warnings
 
 
 @dataclass
@@ -40,9 +47,9 @@ class InfluxPoint:
                     "fields": {"water_level": 1.0},
                 }
         """
-        if tag_keys == None:
+        if tag_keys is None:
             tag_keys = []
-        if fields_to_ignore == None:
+        if fields_to_ignore is None:
             fields_to_ignore = []
 
         return {
@@ -51,11 +58,7 @@ class InfluxPoint:
             "fields": {
                 key: val
                 for (key, val) in data.items()
-                if (
-                    key not in tag_keys
-                    and key != measurement_key
-                    and key not in fields_to_ignore
-                )
+                if (key not in tag_keys and key != measurement_key and key not in fields_to_ignore)
             },
         }
 
@@ -72,17 +75,15 @@ class InfluxPoint:
                 any input data dict keys...
 
         Returns:
-            InfluxPoint: class instance of the caller
+            InfluxPoint (InfluxPoint): class instance of the caller
         """
         # get the field names
-        class_fields = [key for key in cls.__dict__["__dataclass_fields__"].keys()]
+        class_fields = list(cls.__dict__["__dataclass_fields__"].keys())
 
         # drop the leading '_'
         class_fields = list(map(lambda x: x[1::] if x[0] == "_" else x, class_fields))
 
-        attr_values = {
-            key: val for (key, val) in raw_data.items() if key in class_fields
-        }
+        attr_values = {key: val for (key, val) in raw_data.items() if key in class_fields}
 
         return cls(**attr_values)
 
@@ -112,25 +113,23 @@ class InfluxPoint:
             measurement_key (str, optional): Defaults to Class Name.
             tag_keys (list, optional): keys to look up as tags. Defaults to None.
             fields_to_ignore (list, optional): Keys that will not be aggregated.
-            Defaults to nonpublic attribute names.
+                Defaults to nonpublic attribute names.
 
         Returns:
             dict: in the format of an influx_db point
         """
-        if fields_to_ignore == None:
+        if fields_to_ignore is None:
             fields_to_ignore = self._get_non_public_attrs()
         else:
             fields_to_ignore += self._get_non_public_attrs()
 
-        if instance_attrs == None:
+        if instance_attrs is None:
             instance_attrs = self.__dict__
 
-        if measurement_key == None:
+        if measurement_key is None:
             measurement_key = "GatewayTags"
 
-        return self.dict_to_influx_point_dict(
-            instance_attrs, measurement_key, tag_keys, fields_to_ignore
-        )
+        return self.dict_to_influx_point_dict(instance_attrs, measurement_key, tag_keys, fields_to_ignore)
 
 
 @dataclass
@@ -165,25 +164,27 @@ class QpeInfoData(InfluxPoint):
         ease of later extension
 
         Args:
-            same as base class
+            data (dict, optional): Functions as an override to specify keys
+            measurement_key (str, optional): Defaults to Class Name.
+            tag_keys (list, optional): keys to look up as tags. Defaults to None.
+            fields_to_ignore (list, optional): Keys that will not be aggregated.
+                Defaults to nonpublic attribute names.
 
         Returns:
-            dict: same as base class
+            dict: in the format of an influx_db point
         """
-        if data == None:
+        if data is None:
             data = self.__dict__
-        return super().as_influx_point_dict(
-            data, measurement_key, tag_keys, fields_to_ignore
-        )
+        return super().as_influx_point_dict(data, measurement_key, tag_keys, fields_to_ignore)
 
 
 @dataclass
 class GatewayTag(InfluxPoint):
     """Class that handles converting a json dict into
-    class field values and finding a tokenizer(tk)/post processor for
-    the data given. Finding the correct tokenizer is done after
+    class field values and finding a parser for
+    the data given. Finding the correct parser is done after
     creation, but could be done before hand to aid in extension
-    via inheritance. The module function: get_tokenizer_for_tag_id
+    via inheritance. The module function: get_parser_for_tag_id
     is external and cached for this purpose...
     """
 
@@ -195,10 +196,8 @@ class GatewayTag(InfluxPoint):
     advertisingDataPayloadLocatorName: str
     _packet_type: str = None
 
-    def tokenize_data(
-        self, device_type: str = None, tokenizer: ModuleType = None
-    ) -> bool:
-        """attempts to load a tokenizer if none is provided and then
+    def tokenize_data(self, device_type: str = None, parser: ModuleType = None) -> bool:
+        """attempts to load a parser if none is provided and then
         tokenize the data accordingly. If the parsing could not complete
         False is returned otherwise true
 
@@ -209,37 +208,33 @@ class GatewayTag(InfluxPoint):
             bool: False on failure to parse, True on success
         """
 
-        adv_data = "".join(  # 0xbe 0xac ... -> beac...
-            [byte[2::] for byte in self.advertisingDataPayload.split(" ")]
-        )
+        adv_data = "".join([byte[2::] for byte in self.advertisingDataPayload.split(" ")])  # 0xbe 0xac ... -> beac...
 
-        if not tokenizer:
-            tokenizer = self.get_tokenizer_for_tag_id(self.tagId, adv_data, device_type)
+        if not parser:
+            parser = self.get_parser_for_tag_id(self.tagId, adv_data, device_type)
 
-            if not tokenizer:  # if a tokenizer could not me identified
-                return False
+        if not parser:  # if a parser could not me identified
+            return False
 
-        if result := match(tokenizer.tokens_reg_ex, adv_data, VERBOSE):
-            setattr(self, "_tokenizer", tokenizer)  # store tk to instance attributes
-            self._packet_type = tokenizer.__name__.split(".")[2]
+        if result := match(parser.tokens_reg_ex, adv_data, VERBOSE):
+            setattr(self, "_parser", parser)  # store token to instance attributes
+            self._packet_type = parser.__name__.split(".")[2]
 
             # every post proc module must implement this function
-            values: dict = tokenizer.process_adv_data(result)
+            values: dict = parser.process_adv_data(result)
 
-            for (name, val) in values.items():  # store values as attributes
-                setattr(self, name, val)
+            for (name, val) in values.items():
+                setattr(self, name, val)  # store values as attributes pm this class instance
 
             return True
 
-        else:  # adv data did not match the format expected by tokenizer
+        else:  # adv data did not match the format expected by parser
             return False
 
     @staticmethod
-    def get_tokenizer_for_tag_id(
-        id: str, payload: str, device_type: str = None
-    ) -> ModuleType:
-        """parses files in tokenizers/ dir until tag id
-        that is associated with a tokenizer is found. Alternatively
+    def get_parser_for_tag_id(id: str, payload: str, device_type: str = None) -> ModuleType:
+        """parses files in parsers/ dir until tag id
+        that is associated with a parser is found. Alternatively
         if and ID based match isn't made an attempt to match based
         on the packet format is also made.
 
@@ -250,38 +245,32 @@ class GatewayTag(InfluxPoint):
             dict: parser if found, empty dict otherwise
         """
 
-        for fp in Path("src/sensortags/tokenizers").iterdir():
+        for fp in Path("src/sensortags/parsers").iterdir():
             if device_type == fp.stem:
                 try:
-                    tokenizer_mod = importlib.import_module(
-                        f"sensortags.tokenizers.{fp.stem}"
-                    )
+                    parser_mod = importlib.import_module(f"sensortags.parsers.{fp.stem}")
 
-                    return tokenizer_mod
+                    return parser_mod
 
                 except ImportError:
                     warnings.warn(
                         f"""A device type was specified for device id: {id} 
-                        but a tokenizer could not be found. 
+                        but a parser could not be found. 
                         Maybe the type name was misspelled...""",
                     )
                     return None
 
             elif fp.suffix == ".py":
                 try:
-                    tokenizer_mod = importlib.import_module(
-                        f"sensortags.tokenizers.{fp.stem}"
-                    )
+                    parser_mod = importlib.import_module(f"sensortags.parsers.{fp.stem}")
 
-                    if match(tokenizer_mod.tokens_reg_ex, payload, VERBOSE):
-                        return tokenizer_mod
+                    if match(parser_mod.tokens_reg_ex, payload, VERBOSE):
+                        return parser_mod
 
-                except ImportError:
+                except ImportError as e:
                     # if a post proc module could not be found this is
                     # almost 100% a critical error
-                    raise ImportError(
-                        f"{fp.name} should be an importable module but is not"
-                    )
+                    raise ImportError(f"{fp.name} should be an importable module but is not") from e
 
         return None
 

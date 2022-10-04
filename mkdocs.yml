@@ -1,0 +1,13 @@
+site_name: Quuppa API Example Docs
+
+theme: material
+
+plugins:
+  - mkdocstrings:
+      handlers:
+        python:
+            setup_commands:
+              - import sys
+              - sys.path.append("src")
+  # - pdf-export:
+  #       combined_output_path: docs/docs.pdf

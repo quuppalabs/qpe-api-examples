@@ -1,15 +1,17 @@
 """Provides tokenizing and post processing
 
-The S1 is a temperature and humidity sensor
+The Ruuvi tags have several different sensors and data formats.
 
-Sample Advertising Data: 0x02 0x01 0x06 0x11 0xff 0x99 0x04 0x03 0x7e 0x05 0x2f 0xc8 0x40 0xff 0xd2 0xff 0xfa 0x04 0x06 0x0b 0x65
-02010611ff9904037e052fc840ffd2fffa04060b65
+Sample sensor data Data: 
+03291A1ECE1EFC18F94202CA0B53
+
+Exact description can be found at:
+https://github.com/ruuvi/ruuvi-sensor-protocols/blob/master/dataformat_03.md
 """
 
 import re
 
-import src.helpers.tools as tools
-
+import helpers.tools as tools
 
 tokens_reg_ex = r"""0201[0-9a-z]{2}[0-9a-z]{2}ff990403
 ([0-9a-z]{2}) # Humidity
@@ -19,7 +21,7 @@ tokens_reg_ex = r"""0201[0-9a-z]{2}[0-9a-z]{2}ff990403
 ([0-9a-z]{4}) # Acceleration -  MSB first
 ([0-9a-z]{4}) # Acceleration -  MSB first
 ([0-9a-z]{4}) # Acceleration -  MSB first
-([0-9a-z]{4}) # Battery (millivolts)
+([0-9a-z]{4}) # Battery (volts)
 """
 
 
@@ -27,9 +29,7 @@ def process_adv_data(result: re.Match) -> dict:
     # "_" in name causes this to be ignored when sending to influx DB
     return {
         "humidity": int(result.group(1), 16) * 0.5,
-        "temperature": float(
-            tools.ruuvi_hex_to_signed_float(result.group(2), result.group(3))
-        ),
+        "temperature": float(tools.ruuvi_hex_to_signed_float(result.group(2), result.group(3))),
         "pressure": int(result.group(4), 16) + 50000,
         "acceleration_x": tools.hex_string_to_2s_comp_signed_int(result.group(5), 16),
         "acceleration_y": tools.hex_string_to_2s_comp_signed_int(result.group(6), 16),

@@ -1,14 +1,16 @@
 """Provides tokenizing and post processing
 
 The S4 is a magnetic door open or closed sensor
+This is the alarm frame only. This device also sends a status frame.
 
 Sample Advertising Data:  0x02 0x01 0x06 0x12 0xff 0x39 0x06 0xa4 0x01 0x64 0x01 0x01 0x00 0xff 0x06 0x77 0xaa 0x3f 0x23 0xac 0x3b 0x5a
-
 02010612ff3906a40164010100ff0677aa3f23ac3b5a
+
+FIXME: This qpe output is not recognized by the parser because it is a status frame and needs its own parser:
+02010615ff3906a40001000200020100020677aa3f23ac4bf4
 """
 
 import re
-
 
 tokens_reg_ex = r"""02010612ff3906a401
 ([0-9a-z]{2})   # Battery level 0x64 Battery level is 100%

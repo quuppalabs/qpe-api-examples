@@ -38,12 +38,12 @@ def add_id_arg(parser) -> None:
 
 
 def configure_logging():
-    ## log initialization ##
-    # python boiler plate to setup logging
-    # to console and a file
+    """this function provides a basic logging module initialization"""
+
     log_path = pathlib.Path("logs")
     if not os.path.exists(log_path):
         os.makedirs(log_path)
+
     # logfile will be in /logs/<datetime>.log for instance
     log_path = log_path / (time.strftime(r"%Y%m%d-%H%M%S") + ".log")
 
@@ -52,15 +52,11 @@ def configure_logging():
 
     log_file = logging.FileHandler(log_path)
     log_file.setLevel(logging.DEBUG)
-    log_file.setFormatter(
-        logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: %(message)s")
-    )
+    log_file.setFormatter(logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: %(message)s"))
 
     ch = logging.StreamHandler()
     ch.setLevel(logging.INFO)
-    ch.setFormatter(
-        logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: %(message)s")
-    )
+    ch.setFormatter(logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: %(message)s"))
 
     log.addHandler(log_file)
     log.addHandler(ch)
