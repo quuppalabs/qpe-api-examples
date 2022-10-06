@@ -262,7 +262,11 @@ class GatewayTag(InfluxPoint):
 
             elif fp.suffix == ".py":
                 try:
-                    parser_mod = importlib.import_module(f"sensortags.parsers.{fp.stem}")
+                    if "init" not in fp.stem:
+                        parser_mod = importlib.import_module(f"sensortags.parsers.{fp.stem}")
+
+                    else:
+                        continue
 
                     if match(parser_mod.tokens_reg_ex, payload, VERBOSE):
                         return parser_mod
