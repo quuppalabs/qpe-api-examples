@@ -90,7 +90,7 @@ def get_sensors_values(qpe_base_url: str) -> list[GatewayTag]:
     base_res = requests.get(qpe_urls.get_tag_data_all_items)
     if base_res.status_code == 200:  # check request success
         qpe_res = base_res.json()
-        if qpe_res["code"] == "0":  # check QPE response
+        if qpe_res["code"] == 0:  # check QPE response
             gateway_data = [  # filter out tags without gateway data
                 tag for tag in qpe_res["tags"] if tag["advertisingDataPayload"] != None
             ]
