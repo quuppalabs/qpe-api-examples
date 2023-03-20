@@ -80,6 +80,10 @@ Some examples make use of a "keys.json" file. An example of this can be found in
 
 ```
 
+When running on Windows environment it may be necessary to set custom certificate file or skip SSL certificate verification by setting verify_ssl=False
+https://influxdb-client.readthedocs.io/en/stable/api.html#influxdbclient
+
+
 ## Linting - Pylint
 
 Pylint is a free tool that can be installed with:
